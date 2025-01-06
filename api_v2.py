@@ -113,6 +113,7 @@ import soundfile as sf
 from fastapi import FastAPI, Request, HTTPException, Response
 from fastapi.responses import StreamingResponse, JSONResponse
 from fastapi import FastAPI, UploadFile, File
+from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 from io import BytesIO
 from tools.i18n.i18n import I18nAuto
@@ -143,6 +144,15 @@ print(tts_config)
 tts_pipeline = TTS(tts_config)
 
 APP = FastAPI()
+
+APP.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:1420"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
 class TTS_Request(BaseModel):
     text: str = None
     text_lang: str = None
