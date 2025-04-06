@@ -122,6 +122,7 @@ from GPT_SoVITS.TTS_infer_pack.TTS import TTS, TTS_Config
 from GPT_SoVITS.TTS_infer_pack.text_segmentation_method import get_method_names as get_cut_method_names
 from fastapi.responses import StreamingResponse
 from pydantic import BaseModel
+from fastapi.middleware.cors import CORSMiddleware
 # print(sys.path)
 i18n = I18nAuto()
 cut_method_names = get_cut_method_names()
@@ -145,6 +146,15 @@ print(tts_config)
 tts_pipeline = TTS(tts_config)
 
 APP = FastAPI()
+
+APP.add_middleware(
+    CORSMiddleware,
+    allow_origins=["http://localhost:1420"],
+    allow_credentials=True,
+    allow_methods=["GET", "POST"],
+    allow_headers=["*"],
+)
+
 class TTS_Request(BaseModel):
     text: str = None
     text_lang: str = None
