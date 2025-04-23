@@ -33,7 +33,7 @@ g2pk2
 ko_pron
 opencc; sys_platform != 'linux'
 opencc==1.1.1; sys_platform == 'linux'
-python_mecab_ko; sys_platform != 'win32'
+python_mecab_ko; sys_platform != 'win32'w
 fastapi[standard]>=0.115.2
 x_transformers
 torchmetrics<=1.5

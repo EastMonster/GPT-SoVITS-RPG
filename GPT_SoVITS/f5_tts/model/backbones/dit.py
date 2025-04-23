@@ -15,7 +15,7 @@ from torch.utils.checkpoint import checkpoint
 
 from x_transformers.x_transformers import RotaryEmbedding
 
-from GPT_SoVITS.f5_tts.model.modules import (
+from .....GPT_SoVITS.f5_tts.model.modules import (
     TimestepEmbedding,
     ConvNeXtV2Block,
     ConvPositionEmbedding,
@@ -25,7 +25,7 @@ from GPT_SoVITS.f5_tts.model.modules import (
     get_pos_embed_indices,
 )
 
-from module.commons import sequence_mask
+from ....module.commons import sequence_mask
 
 
 class TextEmbedding(nn.Module):
