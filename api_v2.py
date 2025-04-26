@@ -112,7 +112,9 @@ import subprocess
 import wave
 import signal
 import numpy as np
+import requests
 import soundfile as sf
+from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
 from fastapi.responses import StreamingResponse, JSONResponse
 import uvicorn
@@ -145,11 +147,17 @@ tts_config = TTS_Config(config_path)
 print(tts_config)
 tts_pipeline = TTS(tts_config)
 
-APP = FastAPI()
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    response = requests.get("http://127.0.0.1:1430/ping")
+    print(response.text)
+    yield
+
+APP = FastAPI(lifespan=lifespan)
 
 APP.add_middleware(
     CORSMiddleware,
-    allow_origins=["http://localhost:1420"],
+    allow_origins=["http://localhost:1420", "http://tauri.localhost"],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
     allow_headers=["*"],
@@ -443,7 +451,7 @@ async def tts_get_endpoint(
 
 @APP.post("/tts")
 async def tts_post_endpoint(request: TTS_Request):
-    req = request.dict()
+    req = request.model_dump()
     return await tts_handle(req)
 
 
@@ -454,25 +462,6 @@ async def set_refer_aduio(refer_audio_path: str = None):
     except Exception as e:
         return JSONResponse(status_code=400, content={"message": "set refer audio failed", "Exception": str(e)})
     return JSONResponse(status_code=200, content={"message": "success"})
-
-
-# @APP.post("/set_refer_audio")
-# async def set_refer_aduio_post(audio_file: UploadFile = File(...)):
-#     try:
-#         # 检查文件类型，确保是音频文件
-#         if not audio_file.content_type.startswith("audio/"):
-#             return JSONResponse(status_code=400, content={"message": "file type is not supported"})
-
-#         os.makedirs("uploaded_audio", exist_ok=True)
-#         save_path = os.path.join("uploaded_audio", audio_file.filename)
-#         # 保存音频文件到服务器上的一个目录
-#         with open(save_path , "wb") as buffer:
-#             buffer.write(await audio_file.read())
-
-#         tts_pipeline.set_ref_audio(save_path)
-#     except Exception as e:
-#         return JSONResponse(status_code=400, content={"message": f"set refer audio failed", "Exception": str(e)})
-#     return JSONResponse(status_code=200, content={"message": "success"})
 
 
 @APP.get("/set_gpt_weights")
