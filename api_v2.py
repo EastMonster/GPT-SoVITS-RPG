@@ -114,6 +114,7 @@ import signal
 import numpy as np
 import requests
 import soundfile as sf
+import torch.cuda
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
 from fastapi.responses import StreamingResponse, JSONResponse
@@ -149,7 +150,8 @@ tts_pipeline = TTS(tts_config)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
-    response = requests.get("http://127.0.0.1:1430/ping")
+    mode = "cuda" if torch.cuda.is_available() else "cpu"
+    response = requests.get(f"http://127.0.0.1:1430/ping?mode={mode}")
     print(response.text)
     yield
 
