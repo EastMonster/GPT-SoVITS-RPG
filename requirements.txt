@@ -26,3 +26,4 @@ split-lang
 onnxruntime-gpu
 opencc
 wordsegment
+pydub

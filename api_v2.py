@@ -101,7 +101,6 @@ RESP:
 import os
 import sys
 import traceback
-from typing import Generator
 
 now_dir = os.getcwd()
 sys.path.append(now_dir)
@@ -117,7 +116,7 @@ import soundfile as sf
 import torch.cuda
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, Response
-from fastapi.responses import StreamingResponse, JSONResponse
+from fastapi.responses import JSONResponse
 import uvicorn
 from io import BytesIO
 from tools.i18n.i18n import I18nAuto
@@ -125,6 +124,8 @@ from GPT_SoVITS.TTS_infer_pack.TTS import TTS, TTS_Config
 from GPT_SoVITS.TTS_infer_pack.text_segmentation_method import get_method_names as get_cut_method_names
 from pydantic import BaseModel
 from fastapi.middleware.cors import CORSMiddleware
+
+from postprocessing import post_process
 
 # print(sys.path)
 i18n = I18nAuto()
@@ -189,6 +190,10 @@ class TTS_Request(BaseModel):
     repetition_penalty: float = 1.35
     sample_steps: int = 32
     super_sampling: bool = False
+    # 后处理选项
+    enable_post_process: bool = False
+    sample_rate: int = 32000
+    noise_volume: float = -32.0
 
 
 ### modify from https://github.com/RVC-Boss/GPT-SoVITS/pull/894/files
@@ -354,6 +359,10 @@ async def tts_handle(req: dict):
     return_fragment = req.get("return_fragment", False)
     media_type = req.get("media_type", "wav")
 
+    enable_post = req.get("enable_post_process", False)
+    sample_rate = req.get("sample_rate", 32000)
+    noise_volume = req.get("noise_volume", -32.0)
+
     check_res = check_params(req)
     if check_res is not None:
         return check_res
@@ -364,30 +373,13 @@ async def tts_handle(req: dict):
     try:
         tts_generator = tts_pipeline.run(req)
 
-        if streaming_mode:
+        sr, audio_data = next(tts_generator)
+        audio_data = pack_audio(BytesIO(), audio_data, sr, media_type).getvalue()
+        if enable_post:
+            processed_data = np.frombuffer(post_process(audio_data, sample_rate, noise_volume), dtype=np.int16)
+            audio_data = pack_audio(BytesIO(), processed_data, sr, media_type).getvalue()
 
-            def streaming_generator(tts_generator: Generator, media_type: str):
-                if_frist_chunk = True
-                for sr, chunk in tts_generator:
-                    if if_frist_chunk and media_type == "wav":
-                        yield wave_header_chunk(sample_rate=sr)
-                        media_type = "raw"
-                        if_frist_chunk = False
-                    yield pack_audio(BytesIO(), chunk, sr, media_type).getvalue()
-
-            # _media_type = f"audio/{media_type}" if not (streaming_mode and media_type in ["wav", "raw"]) else f"audio/x-{media_type}"
-            return StreamingResponse(
-                streaming_generator(
-                    tts_generator,
-                    media_type,
-                ),
-                media_type=f"audio/{media_type}",
-            )
-
-        else:
-            sr, audio_data = next(tts_generator)
-            audio_data = pack_audio(BytesIO(), audio_data, sr, media_type).getvalue()
-            return Response(audio_data, media_type=f"audio/{media_type}")
+        return Response(audio_data, media_type=f"audio/{media_type}")
     except Exception as e:
         return JSONResponse(status_code=400, content={"message": "tts failed", "Exception": str(e)})
 
@@ -423,6 +415,9 @@ async def tts_get_endpoint(
     repetition_penalty: float = 1.35,
     sample_steps: int = 32,
     super_sampling: bool = False,
+    enable_post_process: bool = False,
+    sample_rate: int = 32000,
+    noise_volume: float = -32.0,
 ):
     req = {
         "text": text,
@@ -447,6 +442,9 @@ async def tts_get_endpoint(
         "repetition_penalty": float(repetition_penalty),
         "sample_steps": int(sample_steps),
         "super_sampling": super_sampling,
+        "enable_post_process": enable_post_process,
+        "sample_rate": int(sample_rate),
+        "noise_volume": float(noise_volume),
     }
     return await tts_handle(req)
 
