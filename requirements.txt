@@ -1,3 +1,4 @@
+# torch 需手动安装：
 #  CPU: pip install torch==2.6.0 torchaudio
 # CUDA: pip install torch==2.6.0 torchaudio --index-url https://download.pytorch.org/whl/cu124
 pydantic <= 2.10.6

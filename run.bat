@@ -1,1 +1,0 @@
-%~dp0/runtime/python.exe %~dp0/api_v2.py -a 127.0.0.1 -p 9880 -c %~dp0/GPT_SoVITS/configs/tts_infer.yaml
