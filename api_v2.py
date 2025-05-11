@@ -152,7 +152,14 @@ tts_pipeline = TTS(tts_config)
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     mode = "cuda" if torch.cuda.is_available() else "cpu"
-    response = requests.get(f"http://127.0.0.1:1430/ping?mode={mode}")
+    url = f"http://127.0.0.1:1430/ping?mode={mode}"
+
+    if mode == "cuda":
+        current_device = torch.cuda.current_device()
+        device_name = torch.cuda.get_device_name(current_device)
+        url += f"&device_name={device_name}"
+
+    response = requests.get(url)
     print(response.text)
     yield
 
