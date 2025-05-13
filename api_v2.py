@@ -201,6 +201,7 @@ class TTS_Request(BaseModel):
     enable_post_process: bool = False
     sample_rate: int = 32000
     noise_volume: float = -32.0
+    stutter: bool = False
 
 
 ### modify from https://github.com/RVC-Boss/GPT-SoVITS/pull/894/files
@@ -369,6 +370,7 @@ async def tts_handle(req: dict):
     enable_post = req.get("enable_post_process", False)
     sample_rate = req.get("sample_rate", 32000)
     noise_volume = req.get("noise_volume", -32.0)
+    stutter = req.get("stutter", False)
 
     check_res = check_params(req)
     if check_res is not None:
@@ -383,7 +385,7 @@ async def tts_handle(req: dict):
         sr, audio_data = next(tts_generator)
         audio_data = pack_audio(BytesIO(), audio_data, sr, media_type).getvalue()
         if enable_post:
-            processed_data = np.frombuffer(post_process(audio_data, sample_rate, noise_volume), dtype=np.int16)
+            processed_data = np.frombuffer(post_process(audio_data, sample_rate, noise_volume, stutter), dtype=np.int16)
             audio_data = pack_audio(BytesIO(), processed_data, sr, media_type).getvalue()
 
         return Response(audio_data, media_type=f"audio/{media_type}")
@@ -425,6 +427,7 @@ async def tts_get_endpoint(
     enable_post_process: bool = False,
     sample_rate: int = 32000,
     noise_volume: float = -32.0,
+    stutter: bool = False,
 ):
     req = {
         "text": text,
@@ -452,6 +455,7 @@ async def tts_get_endpoint(
         "enable_post_process": enable_post_process,
         "sample_rate": int(sample_rate),
         "noise_volume": float(noise_volume),
+        "stutter": stutter,
     }
     return await tts_handle(req)
 

@@ -34,7 +34,7 @@ def noise_fluctuation(audio: AudioSegment, base_volume: float) -> AudioSegment:
         fluctuating_noise += noise_chunk
 
     # 应用低通滤波器使噪音更低沉
-    # 你可以调整 cutoff_frequency 来改变低沉的程度，值越小声音越低沉 (例如 500, 1000, 2000 Hz)
+    # 调整 cutoff_frequency 来改变低沉的程度，值越小声音越低沉 (例如 500, 1000, 2000 Hz)
     cutoff_frequency = 1000  # Hz
     filtered_noise = low_pass_filter(fluctuating_noise, cutoff_frequency)
 
@@ -42,11 +42,50 @@ def noise_fluctuation(audio: AudioSegment, base_volume: float) -> AudioSegment:
     return final_audio
 
 
-def post_process(audio_bytes: bytes, sample_rate: int, noise_volume: float) -> bytes:
+def voice_stutter(audio: AudioSegment) -> AudioSegment:
+    stutter_segment_duration_ms = 100
+    silence_probability = 0.2
+
+    processed_segments = []
+    cursor_ms = 0
+    while cursor_ms < len(audio):
+        segment_end_ms = cursor_ms + stutter_segment_duration_ms
+        # 获取当前片段，确保不超出音频总长度
+        current_segment = audio[cursor_ms : min(segment_end_ms, len(audio))]
+
+        # 如果当前片段长度为0（例如，当光标到达音频末尾时），则停止处理
+        if len(current_segment) == 0:
+            break
+
+        # 决定是否在当前片段前插入静音
+        if np.random.rand() < silence_probability:
+            # 插入一段与当前片段等长的静音
+            silence_to_insert = AudioSegment.silent(
+                duration=len(current_segment), frame_rate=audio.frame_rate
+            )
+            processed_segments.append(silence_to_insert)
+        
+        # 总是添加原始的当前片段
+        processed_segments.append(current_segment)
+
+        cursor_ms = segment_end_ms
+
+    if processed_segments:
+        return sum(processed_segments, AudioSegment.empty())
+    else:
+        return audio
+
+
+def post_process(
+    audio_bytes: bytes, sample_rate: int, noise_volume: float, stutter: bool
+) -> bytes:
     audio = AudioSegment.from_raw(
         BytesIO(audio_bytes), frame_rate=32000, channels=1, sample_width=2
     )
     low_quality = audio.set_frame_rate(sample_rate)
+
+    if stutter is True:
+        low_quality = voice_stutter(low_quality)
 
     final_audio = noise_fluctuation(low_quality, noise_volume)
 
