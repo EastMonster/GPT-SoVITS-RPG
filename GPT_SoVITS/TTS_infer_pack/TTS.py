@@ -291,15 +291,17 @@ class TTS_Config:
         self.default_configs[version] = configs.get(version, self.default_configs[version])
         self.configs: dict = configs.get("custom", deepcopy(self.default_configs[version]))
 
-        self.device = self.configs.get("device", torch.device("cpu"))
+        self.device = torch.device("cuda")
+        # self.device = self.configs.get("device", torch.device("cpu"))
         if "cuda" in str(self.device) and not torch.cuda.is_available():
             print("Warning: CUDA is not available, set device to CPU.")
             self.device = torch.device("cpu")
 
-        self.is_half = self.configs.get("is_half", False)
-        # if str(self.device) == "cpu" and self.is_half:
-        #     print(f"Warning: Half precision is not supported on CPU, set is_half to False.")
-        #     self.is_half = False
+        # self.is_half = self.configs.get("is_half", False)
+        self.is_half = True
+        if str(self.device) == "cpu" and self.is_half:
+            print("Warning: Half precision is not supported on CPU, set is_half to False.")
+            self.is_half = False
 
         self.version = version
         self.t2s_weights_path = self.configs.get("t2s_weights_path", None)
@@ -346,14 +348,15 @@ class TTS_Config:
         return configs
 
     def save_configs(self, configs_path: str = None) -> None:
-        configs = deepcopy(self.default_configs)
-        if self.configs is not None:
-            configs["custom"] = self.update_configs()
+        # configs = deepcopy(self.default_configs)
+        # if self.configs is not None:
+        #     configs["custom"] = self.update_configs()
 
-        if configs_path is None:
-            configs_path = self.configs_path
-        with open(configs_path, "w") as f:
-            yaml.dump(configs, f)
+        # if configs_path is None:
+        #     configs_path = self.configs_path
+        # with open(configs_path, "w") as f:
+        #     yaml.dump(configs, f)
+        pass
 
     def update_configs(self):
         self.config = {
